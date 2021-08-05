@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS pgrouting.edges(
     target integer,
     cost double precision,
     reverse_cost double precision,
-    geom geometry('LINESTRING', {$srid})
+    geom geometry('LINESTRING', {$srid}),
+	id_ref_edge text
 );
 
 CREATE TABLE IF NOT EXISTS pgrouting.routing_poi(
@@ -117,9 +118,9 @@ DECLARE
 $BODY$;
 
 -- Function to create edges
-DROP FUNCTION IF EXISTS pgrouting.create_edge(geometry, double precision, double precision);
+DROP FUNCTION IF EXISTS pgrouting.create_edge(geometry, double precision, double precision, text);
 CREATE OR REPLACE FUNCTION pgrouting.create_edge(
-	geom_val geometry('LINESTRING', {$srid}), cost_val double precision, reverse_cost_val double precision)
+	geom_val geometry('LINESTRING', {$srid}), cost_val double precision, reverse_cost_val double precision, id_ref text)
     RETURNS integer
     LANGUAGE 'plpgsql'
 
@@ -131,9 +132,7 @@ DECLARE
   BEGIN
 	
 	SELECT id into id_val FROM pgrouting.edges 
-	WHERE ST_DWithin(ST_StartPoint(geom), ST_StartPoint(geom_val), 0.001)
-    AND ST_DWithin(ST_EndPoint(geom), ST_EndPoint(geom_val), 0.001)
-    AND ST_Contains(ST_BUFFER(geom, 0.01), geom_val);
+	WHERE id_ref_edge = id_ref;
 	
 	IF id_val IS NULL THEN 
 		INSERT INTO pgrouting.edges(geom,source,target,cost,reverse_cost)
